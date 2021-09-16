@@ -56,12 +56,9 @@ def parse_66ys_category():
                         if not child.string in blacks:
                             urls.append({'title':child.string,'url':url})
         #获取搜索页面链接
-        selector = bs.select('#header > div > div.bd2 > div.bd3 > div:nth-child(2) > div:nth-child(1) > div > div.search > form > div.searchl > p:nth-child(1) > select')
+        selector = bs.select('#searchform')
         for item in selector:
-            for child in item.children:
-                if type(child) == bs4.element.Tag:
-                    search_urls.append({'title':child.string,'url':child.get('value')})
-    print(urls)
+            search_urls.append(concatUrl(urls[0]['url'], item.get('action')))
     return urls, search_urls
 
 class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
@@ -108,6 +105,23 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
                                 imgurl = img[0].get('src')
                                 title = img[0].get('title')
                                 urls.append({'title':title,'url':url,'img':imgurl})
+        else:
+            print(res.text)
+        return urls
+
+    def search_66ys_page_movies(self, search_url):
+        urls = []
+        res = requests.post(search_url,data={'show':'title,smalltext','tempid':1,'tbname':'Article','keyboard':self.search_word.encode('gb2312')},verify=False)
+        if res.status_code == 200:
+            bs = bs4.BeautifulSoup(res.content.decode('gb2312','ignore'),'html.parser')
+            selector = bs.select('body > div:nth-child(3) > div > div.mainleft ul')
+            for ul in selector:
+                for item in ul.children:
+                    if type(item) == bs4.element.Tag:
+                        url = item.select('div.listimg > a')[0].get('href')
+                        img = item.select('div.listimg > a > img')[0].get('src')
+                        title = item.select('div.listimg > a > img')[0].get('alt')
+                        urls.append({'title':title,'url':url,'img':img})
         else:
             print(res.text)
         return urls
@@ -197,6 +211,14 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
         controls = [
             {'group':nav_labels,'height':30},
             {'type':'space','height':10},
+            {'group':
+                [
+                    {'type':'edit','name':'search_edit','label':'搜索'},
+                    {'type':'button','name':'搜电影','@click':'onSearch'}
+                ]
+                ,'height':30
+            },
+            {'type':'space','height':10},
             {'type':'grid','name':'list','itemlayout':grid_layout,'value':self.movies,'marginSize':5,'itemheight':180,'itemwidth':120},
             {'group':
                 [
@@ -237,14 +259,20 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
     def onSearch(self,*args):
         self.search_word = self.player.getControlValue('main','search_edit')
         if len(self.search_urls) > 0:
-            url = self.search_urls[0]['url'] + urllib.parse.quote(self.search_word,encoding='gbk')
-            print(f'url={url}')
-            self.search_movies = self.parse_66ys_page_movies(url)
+            url = self.search_urls[0]
+            self.search_movies = self.search_66ys_page_movies(url)
+            print(self.search_movies)
             if len(self.search_movies) > 0:
-                list_layout = {'group':[{'type':'label','name':'title','width':0.9},{'type':'link','name':'播放','width':30,'@click':'onMovieImageClick'},{'type':'space'}]}
-                controls = {'type':'list','name':'list','itemlayout':list_layout,'value':self.search_movies,'separator':True,'itemheight':40}
+                grid_layout = {'group':
+                            [
+                                {'type':'image','name':'img','width':120,'height':150,'@click':'onMovieImageClick'},
+                                {'type':'label','name':'title','hAlign':'center'},
+                            ],
+                            'dir':'vertical'
+                      }
+                controls = {'type':'grid','name':'list','itemlayout':grid_layout,'value':self.search_movies,'marginSize':5,'itemheight':180,'itemwidth':120}
                 if not self.player.isModalExist('search'):
-                    self.doModal('search',500,400,self.search_word,controls)
+                    self.doModal('search',800,600,self.search_word,controls)
                 else:
                     self.player.updateControlValue('search','list',self.search_movies)
             else:
@@ -280,6 +308,8 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
             self.movie_urls[movie_name] = playUrl
             self.doModal(movie_name, 400, 500, movie_name, layout)
             self.movie_urls.pop(movie_name)
+        else:
+            self.player.toast('main','无可播放源')
 
     def onPlayClick(self, pageId, control, item, *args):
         if pageId in self.movie_urls:
