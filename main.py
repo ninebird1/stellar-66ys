@@ -260,7 +260,8 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
                     #获取新分类的页面数
                     self.loading()
                     self.pages = self.parse_66ys_page_num(self.curCategory)
-                    self.num_page = '共' + str(len(self.pages)) + '页'
+                    self.num_page = num_page = '共' + str(len(self.pages)) + '页'
+                    self.player.updateControlValue('main','num_page',num_page)
                     self.selectPage()
                     self.loading(True)
                 break
@@ -291,7 +292,8 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
                 url = concatUrl(self.curCategory, self.pages[self.pageIndex])
                 self.movies = self.parse_66ys_page_movies(url)
                 self.player.updateControlValue('main','list',self.movies)
-                self.cur_page = '第' + str(self.pageIndex + 1) + '页'
+                self.cur_page = page = '第' + str(self.pageIndex + 1) + '页'
+                self.player.updateControlValue('main','cur_page',page)
 
     def onClickFormerPage(self, *args):
         if self.pageIndex > 0:
