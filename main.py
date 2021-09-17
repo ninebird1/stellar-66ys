@@ -303,8 +303,11 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
             playUrl = parse_66ys_movie_magnet(self.search_movies[item]['url'])
             movie_name = self.search_movies[item]['title']
         if len(playUrl) > 0:
-            list_layout = {'type':'link','name':'title','@click':'onPlayClick'}
-            layout = {'type':'list','name':'list','itemlayout':list_layout,'value':playUrl,'separator':True,'itemheight':30}
+            list_layout = [{'type':'label','name':'title','fontSize':12}, {'type':'link','name':'播放','width':30,'@click':'onPlayClick'}]
+            if hasattr(self.player,'download'):
+                list_layout.append({'type':'space','width':10})
+                list_layout.append({'type':'link','name':'下载','width':30,'@click':'onDownloadClick'})
+            layout = {'type':'list','name':'list','itemlayout':{'group':list_layout},'value':playUrl,'separator':True,'itemheight':30}
             self.movie_urls[movie_name] = playUrl
             self.doModal(movie_name, 400, 500, movie_name, layout)
             self.movie_urls.pop(movie_name)
@@ -314,6 +317,10 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
     def onPlayClick(self, pageId, control, item, *args):
         if pageId in self.movie_urls:
             self.player.play(self.movie_urls[pageId][item]['url'])
+    
+    def onDownloadClick(self, pageId, control, item, *args):
+        if pageId in self.movie_urls:
+            self.player.download(self.movie_urls[pageId][item]['url'])
 
     def selectPage(self):
         if len(self.pages) > self.pageIndex:
