@@ -110,6 +110,7 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
         return urls
 
     def search_66ys_page_movies(self, search_url):
+        print(f'{search_url=}')
         urls = []
         res = requests.post(search_url,data={'show':'title,smalltext','tempid':1,'tbname':'Article','keyboard':self.search_word.encode('gb2312')},verify=False)
         if res.status_code == 200:
@@ -374,23 +375,24 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
         print(f'onPlayerSearch:{wd}')
         result = []
         self.search_word = wd
+        url = 'https://www.66yingshi.com/e/search/index.php'
         if len(self.search_urls) > 0:
             url = self.search_urls[0]
-            movies = self.search_66ys_page_movies(url)
-            for item in movies:
-                magnets = parse_66ys_movie_magnet(item['url'])
-                if len(magnets) > 0:
-                    urls = []
-                    index = 1
-                    for magnet in magnets:
-                        obj = []
-                        obj.append('磁力' + str(index))
-                        obj.append(magnet['url'])
-                        urls.append(obj)
-                        index = index + 1
-                    result.append({'urls':urls,'name':item['title'],'pic':item['img']})
-                if len(result) >= limit:
-                    break
+        movies = self.search_66ys_page_movies(url)
+        for item in movies:
+            magnets = parse_66ys_movie_magnet(item['url'])
+            if len(magnets) > 0:
+                urls = []
+                index = 1
+                for magnet in magnets:
+                    obj = []
+                    obj.append('磁力' + str(index))
+                    obj.append(magnet['url'])
+                    urls.append(obj)
+                    index = index + 1
+                result.append({'urls':urls,'name':item['title'],'pic':item['img']})
+            if len(result) >= limit:
+                break
         self.player.dispatchResult(dispatchId, searchId=searchId, wd=wd, result=result)
     
 def newPlugin(player:StellarPlayer.IStellarPlayer,*arg):
