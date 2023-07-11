@@ -84,29 +84,20 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
         res = requests.get(page_url,verify=False)
         if res.status_code == 200:
             bs = bs4.BeautifulSoup(res.content.decode('gb2312','ignore'),'html.parser')
+            titleKey = 'title'
             if self.curCategoryName != '首页':
-                selector = bs.select('body > div:nth-child(4) > div.mainleft > div > div > ul')
-                for ul in selector:
-                    for item in ul.children:
-                        if type(item) == bs4.element.Tag:
-                            url = item.select('div.listimg > a')[0].get('href')
-                            img = item.select('div.listimg > a > img')[0].get('src')
-                            title = item.select('div.listimg > a > img')[0].get('alt')
-                            urls.append({'title':title,'url':url,'img':img})
+                selector = bs.select('body > div:nth-child(4) > div.mainleft > div > div > ul a')
+                titleKey = 'alt'
             else:
-                selector = bs.select('body > div:nth-child(4) > div.tjlist > ul')
-                for ul in selector:
-                    for item in ul.children:
-                        if type(item) == bs4.element.Tag:
-                            link = item.find('a')
-                            img = item.select('a > img')
-                            if link and img:
-                                url = link.get('href')
-                                imgurl = img[0].get('src')
-                                title = img[0].get('title')
-                                urls.append({'title':title,'url':url,'img':imgurl})
-        else:
-            print(res.text)
+                selector = bs.select('body > div:nth-child(4) > div.tjlist > ul a')
+            print(selector)
+            for item in selector:
+                url = urllib.parse.urljoin(home_66ys_url, item.get('href'))
+                imgTag = item.select('img')
+                if len(imgTag) != 0:
+                    img = imgTag[0].get('src')
+                    title = imgTag[0].get(titleKey)
+                    urls.append({'title':title,'url':url,'img':img})
         return urls
 
     def search_66ys_page_movies(self, search_url):
@@ -119,7 +110,8 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
             for ul in selector:
                 for item in ul.children:
                     if type(item) == bs4.element.Tag:
-                        url = item.select('div.listimg > a')[0].get('href')
+                        href = item.select('div.listimg > a')[0].get('href')
+                        url = urllib.parse.urljoin(home_66ys_url, href)
                         img = item.select('div.listimg > a > img')[0].get('src')
                         title = item.select('div.listimg > a > img')[0].get('alt')
                         urls.append({'title':title,'url':url,'img':img})
@@ -136,13 +128,12 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
         res = requests.get(catUrl,verify=False)
         if res.status_code == 200:
             bs = bs4.BeautifulSoup(res.content.decode('gb2312','ignore'),'html.parser')
-            selector = bs.select('body > div:nth-child(4) > div.mainleft > div > div > div:nth-child(1)')
+            selector = bs.select('body > div:nth-child(4) > div.mainleft > div > div > div:nth-child(1) a')
             for item in selector:
-                for child in item.children:
-                    if type(child) == bs4.element.Tag:
-                        page = child.get('href')
-                        if page:
-                            pages.append(page)
+                href = item.get('href')
+                if href:
+                    href = urllib.parse.urljoin(catUrl, href)
+                    pages.append(href)
         else:
             print(res.text)
         print(pages)
