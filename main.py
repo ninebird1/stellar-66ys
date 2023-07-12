@@ -295,11 +295,19 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
             playUrl = parse_66ys_movie_magnet(self.search_movies[item]['url'])
             movie_name = self.search_movies[item]['title']
         if len(playUrl) > 0:
+            for item in playUrl:
+                item['checked'] = False
             list_layout = [{'type':'label','name':'title','fontSize':12}, {'type':'link','name':'播放','width':30,'@click':'onPlayClick'}]
             if hasattr(self.player,'download'):
                 list_layout.append({'type':'space','width':10})
                 list_layout.append({'type':'link','name':'下载','width':30,'@click':'onDownloadClick'})
-            layout = {'type':'list','name':'list','itemlayout':{'group':list_layout},'value':playUrl,'separator':True,'itemheight':30}
+            layout = [
+                    {'type':'list','name':'list','itemlayout':{'group':list_layout},'value':playUrl,'separator':True,'itemheight':30},
+                    ]
+            if len(playUrl) > 1 and self.player.version > '20230711111652':
+                list_layout.insert(0, {'type':'check','width':30,'@click':'onSelectCheck'})
+                layout.append({'group':[{'type':'space'},{'type':'button','name':'下载选中项','@click':'onClickDownloadSelected'},{'type':'space'}],'height':30})
+
             self.movie_urls[movie_name] = playUrl
             self.doModal(movie_name, 400, 500, movie_name, layout)
             self.movie_urls.pop(movie_name)
@@ -309,10 +317,33 @@ class m66ysplugin(StellarPlayer.IStellarPlayerPlugin):
     def onPlayClick(self, pageId, control, item, *args):
         if pageId in self.movie_urls:
             self.player.play(self.movie_urls[pageId][item]['url'])
+
+    def onSelectCheck(self, pageId, control, item, *args):
+        if pageId in self.movie_urls:
+            self.movie_urls[pageId][item]['checked'] = not self.movie_urls[pageId][item]['checked']
+           
     
     def onDownloadClick(self, pageId, control, item, *args):
         if pageId in self.movie_urls:
             self.player.download(self.movie_urls[pageId][item]['url'])
+
+    def onClickDownloadSelected(self, pageId, *args):
+        print(pageId)
+        if pageId in self.movie_urls:
+            hashs = []
+            for item in self.movie_urls[pageId]:
+                if item['checked']:
+                    magnetUrl = item['url']
+                    pos = magnetUrl.find('&')
+                    if pos == -1:
+                        pos = len(magnetUrl)
+                    hash = magnetUrl[len('magnet:?xt=urn:btih:'):pos]
+                    hashs.append(hash)
+            print(hashs)
+            if len(hashs) > 0 :
+                magnets = 'magnets://urls=' + ','.join(hashs[0:len(hashs)]) + '&name=' + urllib.parse.quote(pageId)
+                print(magnets)
+                self.player.download(magnets)
 
     def selectPage(self):
         if len(self.pages) > self.pageIndex:
